@@ -1,6 +1,3 @@
-/*
-Copyright © 2024 NAME HERE <EMAIL ADDRESS>
-*/
 package cmd
 
 import (
@@ -10,29 +7,22 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// startCmd represents the start command
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start the game",
 	Long: `Long Description Placeholder`,
 	Run: func(cmd *cobra.Command, args []string) {
-		name, _ := cmd.Flags().GetString("name")
-		age, _ := cmd.Flags().GetInt("age")
-
-		if name != "" {
-			fmt.Printf("Hello %s!\n", name)
-		}
-
-		if age > 0 {
-			fmt.Printf("You are %d years old.\n", age)
-		}
-
-		class, err := selectClass()
-		if err != nil {
-			fmt.Printf("Class selection failed: %v\n", err)
+		class, errClass := selectClass()
+		name, errName := inputName()
+		if errClass != nil {
+			fmt.Printf("Klassenwahl Fehlgeschlagen: %v\n", errClass)
 			return
 		}
-		fmt.Printf("You have chosen the %s class.\n", class)
+		if errName != nil {
+			fmt.Printf("Namenseingabe Fehlgeschlagen: %v\n", errName)
+		}
+		fmt.Printf("Hallo %s!\n", name)
+		fmt.Printf("Du hast dir die %s Rolle ausgesucht.\n", class)
 	},
 }
 
@@ -40,7 +30,7 @@ func selectClass() (string, error) {
 	classes := []string{"Frontend Dev", "Backend Dev", "DevOps"}
 	
 	prompt := promptui.Select{
-		Label: "Select your class",
+		Label: "Suche dir eine Rolle heraus",
 		Items: classes,
 	}
 
@@ -53,11 +43,37 @@ func selectClass() (string, error) {
 	return result, nil
 }
 
+func inputName() (string, error) {
+	inputPrompt := promptui.Prompt{
+		Label: "Bitte gebe deinen Namen ein",
+	}
+
+	result, err := inputPrompt.Run()
+	if err != nil {
+		return "", err
+	}
+
+	confirmPrompt := promptui.Prompt{
+		Label:     fmt.Sprintf("Ist '%s' korrekt?", result),
+		IsConfirm: true,
+		Default:   "y",
+	}
+
+	_, err = confirmPrompt.Run()
+	if err != nil {
+		// If the error is not ErrAbort, it means the user confirmed (either by 'y' or just pressing enter)
+		if err != promptui.ErrAbort {
+			return result, nil
+		}
+		// If it's ErrAbort, ask for the name again
+		return inputName()
+	}
+
+	return result, nil
+}
+
 func init() {
 	rootCmd.AddCommand(startCmd)
-
-	startCmd.Flags().StringP("name", "n", "", "Name to greet")
-	startCmd.Flags().IntP("age", "a", 1, "Age of yourself")
 
 	// Here you will define your flags and configuration settings.
 
