@@ -6,16 +6,6 @@ import (
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 )
-
-type Player struct {
-	Name string
-	Class string
-	Level int
-	Experience int
-	Tools []string
-	CurrentLevel int
-}
-
 func initDB() {
 	var err error
 

@@ -1,28 +1,70 @@
 package cmd
 
 import (
+	"byteQuest/models"
+	"errors"
 	"fmt"
+	"strconv"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/cobra"
+	"gorm.io/driver/sqlite"
+	"gorm.io/gorm"
 )
 
 var startCmd = &cobra.Command{
 	Use:   "start",
 	Short: "Start the game",
-	Long: `Long Description Placeholder`,
+	Long:  `Long Description Placeholder`,
 	Run: func(cmd *cobra.Command, args []string) {
-		class, errClass := selectClass()
 		name, errName := inputName()
+		class, errClass := selectClass()
+		pin, errPIN := createPIN()
+		if errPIN != nil {
+			fmt.Printf("PIN Fehlgeschlagen: %v\n", errPIN)
+			return
+		}
 		if errClass != nil {
 			fmt.Printf("Klassenwahl Fehlgeschlagen: %v\n", errClass)
 			return
 		}
 		if errName != nil {
 			fmt.Printf("Namenseingabe Fehlgeschlagen: %v\n", errName)
+			return
 		}
 		fmt.Printf("Hallo %s!\n", name)
 		fmt.Printf("Du hast dir die %s Rolle ausgesucht.\n", class)
+
+		// Add player to the database
+		db, err := gorm.Open(sqlite.Open("players.db"), &gorm.Config{})
+		if err != nil {
+			fmt.Printf("Datenbankverbindung fehlgeschlagen: %v\n", err)
+			return
+		}
+
+		// Add this line to auto-migrate the database
+		err = db.AutoMigrate(&models.Player{})
+		if err != nil {
+			fmt.Printf("Datenbankmigrierung fehlgeschlagen: %v\n", err)
+			return
+		}
+
+		player := models.Player{
+			Name:       name,
+			Class:      class,
+			PIN:        pin,
+			Level:      1,
+			Experience: 0,
+			Bytes:      0,
+		}
+
+		result := db.Create(&player)
+		if result.Error != nil {
+			fmt.Printf("Spieler konnte nicht zur Datenbank hinzugefügt werden: %v\n", result.Error)
+			return
+		}
+
+		fmt.Println("Spieler erfolgreich zur Datenbank hinzugefügt!")
 	},
 }
 
@@ -36,7 +78,6 @@ func selectClass() (string, error) {
 
 	_, result, err := prompt.Run()
 	if err != nil {
-		
 		return "", err
 	}
 
@@ -45,7 +86,7 @@ func selectClass() (string, error) {
 
 func inputName() (string, error) {
 	inputPrompt := promptui.Prompt{
-		Label: "Bitte gebe deinen Namen ein",
+		Label: "Bitte erstelle einen Benutzernamen",
 	}
 
 	result, err := inputPrompt.Run()
@@ -70,6 +111,38 @@ func inputName() (string, error) {
 	}
 
 	return result, nil
+}
+
+func createPIN() (int, error) {
+	validate := func(input string) error {
+		if len(input) != 4 {
+			return errors.New("PIN muss genau 4 Ziffern lang sein")
+		}
+		for _, char := range input {
+			if char < '0' || char > '9' {
+				return errors.New("PIN darf nur Ziffern enthalten")
+			}
+		}
+		return nil
+	}
+
+	inputPrompt := promptui.Prompt{
+		Label:    "Bitte gib eine 4-stellige PIN ein (Damit du später deinen Account wieder finden kannst)",
+		Mask:     '*',
+		Validate: validate,
+	}
+
+	result, err := inputPrompt.Run()
+	if err != nil {
+		return 0, err
+	}
+
+	pin, err := strconv.Atoi(result)
+	if err != nil {
+		return 0, fmt.Errorf("ungültige PIN: %v", err)
+	}
+
+	return pin, nil
 }
 
 func init() {
