@@ -136,7 +136,7 @@ var continueCmd = &cobra.Command{
 			err = validatePIN(db, player)
 
 			if err != nil {
-				fmt.Printf("PIN konnte nicht validiert werden: %v\n", err)
+				fmt.Printf("PIN konnte nicht überprüft werden: %v\n", err)
 				return
 			}
 		}
