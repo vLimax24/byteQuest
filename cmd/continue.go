@@ -89,7 +89,7 @@ func validatePIN(db *gorm.DB, player *models.Player) error {
 	}
 
 	if inputPIN != player.PIN {
-		fmt.Println("PIN ist falsch!")
+		fmt.Println("PIN ist inkorrekt!")
 		validatePIN(db, player)
 	}
 
